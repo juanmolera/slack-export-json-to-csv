@@ -40,10 +40,11 @@ def load_user_data(userjson_path):
             users[userid] = [realname]
     return users
 
-def extract_attachment_title(item):
-    """Extracts the title of the first attachment if present in the message item."""
+def extract_attachment_titles(item):
+    """Extracts titles of all attachments and joins them with commas."""
     if "files" in item and item["files"]:
-        return item["files"][0].get("title", "")
+        titles = [file.get("title", "") for file in item["files"] if "title" in file]
+        return ", ".join(titles)
     return ""
 
 def process_json_files(jsondir, users, csvwriter):
@@ -65,10 +66,10 @@ def process_json_files(jsondir, users, csvwriter):
                                     ts = datetime.fromtimestamp(float(item['ts']), tz=timezone.utc)
                                     date, time = ts.strftime("%Y-%m-%d"), ts.strftime("%H:%M:%S")
                                     message_text = transform_text(item["text"], users)
-                                    attachment_title = extract_attachment_title(item)
+                                    attachment_titles = extract_attachment_titles(item)
                                     
                                     # Write row with specified column order
-                                    csvwriter.writerow([channel_name, date, time, message_text, attachment_title, user_cur[0]])
+                                    csvwriter.writerow([channel_name, date, time, message_text, attachment_titles, user_cur[0]])
                     except json.JSONDecodeError:
                         print(f"Error decoding JSON file: {content}")
 
@@ -78,6 +79,7 @@ def main():
     
     with open(outcsv_file, 'w', newline='', encoding='utf-8') as f:
         csvwriter = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        # Column order: channel, date, time, message, attachment, author
         csvwriter.writerow(['canal', 'fecha', 'hora', 'mensaje', 'adjunto', 'autor'])
         
         process_json_files(jsondir, users, csvwriter)  # Process JSON files and write to CSV
